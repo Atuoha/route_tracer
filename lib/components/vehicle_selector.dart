@@ -44,7 +44,7 @@ class VehicleSelector extends StatelessWidget {
                       kVehicleAssets[i],
                       height: 28,
                       width: 42,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                     ),
                   ),
                   const SizedBox(height: 4),

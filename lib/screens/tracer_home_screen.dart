@@ -7,6 +7,7 @@ import 'package:tracer/models/draw_stroke.dart';
 import 'package:tracer/models/vehicle_type.dart';
 import 'package:tracer/widgets/dark_map_painter.dart';
 import 'package:tracer/widgets/stroke_painter.dart';
+import 'dart:math' as Math;
 
 class TracerHomeScreen extends StatefulWidget {
   const TracerHomeScreen({super.key});
@@ -28,6 +29,7 @@ class _TracerHomeScreenState extends State<TracerHomeScreen>
   late Animation<double> animProgress;
   bool isAnimating = false;
   List<Offset> flatPath = [];
+
 
   @override
   void initState() {
@@ -79,6 +81,27 @@ class _TracerHomeScreenState extends State<TracerHomeScreen>
     }
     return pts.last;
   }
+
+  double getAngle(List<Offset> pts, double t) {
+  if (pts.length < 2) return 0;
+
+  final totalLen = totalPathLength(pts);
+  final targetLen = totalLen * t;
+
+  double accum = 0;
+  for (int i = 1; i < pts.length; i++) {
+    final seg = pts[i] - pts[i - 1];
+    final segLen = seg.distance;
+
+    if (accum + segLen >= targetLen) {
+      return Math.atan2(seg.dy, seg.dx);
+    }
+    accum += segLen;
+  }
+
+  final lastSeg = pts.last - pts[pts.length - 2];
+  return Math.atan2(lastSeg.dy, lastSeg.dx);
+}
 
   void startAnimation() {
     flatPath = buildFlatPath();
@@ -162,33 +185,38 @@ class _TracerHomeScreenState extends State<TracerHomeScreen>
             AnimatedBuilder(
               animation: animProgress,
               builder: (context, child) {
-                final pos = positionAtFraction(flatPath, animProgress.value);
-                const vehicleSize = 36.0;
+              final pos = positionAtFraction(flatPath, animProgress.value);
+              final angle = getAngle(flatPath, animProgress.value) + Math.pi / 2;
+              const vehicleSize = 36.0;
+
                 return Positioned(
-                  left: pos.dx - vehicleSize / 2,
-                  top: pos.dy - vehicleSize / 2,
-                  child: Container(
-                    width: vehicleSize,
-                    height: vehicleSize,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: selectedColor.withValues(alpha: 0.6),
-                          blurRadius: 16,
-                          spreadRadius: 2,
+                        left: pos.dx - vehicleSize / 2,
+                        top: pos.dy - vehicleSize / 2,
+                        child: Transform.rotate(
+                          angle: angle,
+                          child: Container(
+                            width: vehicleSize,
+                            height: vehicleSize,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: selectedColor.withValues(alpha: 0.6),
+                                  blurRadius: 16,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.asset(
+                                kVehicleAssets[selectedVehicle.index],
+                                fit: BoxFit.contain, // IMPORTANT
+                              ),
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(
-                        kVehicleAssets[selectedVehicle.index],
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                );
+                      );
               },
             ),
           Positioned(
